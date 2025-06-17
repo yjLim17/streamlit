@@ -2,16 +2,22 @@ import streamlit as st
 import json
 import os
 import hashlib
-import subprocess
-import tempfile
 import time
 import re
+import sys
+import io
+import contextlib
+import traceback
+import tempfile
+from contextlib import redirect_stdout, redirect_stderr
+
+# matplotlib 설정을 더 강력하게 (맨 앞에 배치)
 import matplotlib
-matplotlib.use("Agg")  # 🔧 반드시 추가해야 Streamlit 등 서버 환경에서 오류 안남
+matplotlib.use('Agg')  # 반드시 pyplot import 전에!
 import matplotlib.pyplot as plt
+plt.ioff()  # 인터랙티브 모드 비활성화
 
-
-# streamlit-ace import (설치되지 않았을 경우 대비)
+# streamlit-ace import
 try:
     from streamlit_ace import st_ace
     ACE_AVAILABLE = True
@@ -238,103 +244,132 @@ def is_admin():
     return st.session_state.get('username') == ADMIN_USERNAME
 
 def run_code(code, test_input):
-    """사용자 코드 실행 - 인코딩 문제 해결 및 차트 표시"""
+    """exec를 사용한 안전한 코드 실행"""
     try:
-        # 인코딩 환경변수 설정
-        env = os.environ.copy()
-        env['PYTHONIOENCODING'] = 'utf-8'
-        env['LANG'] = 'ko_KR.UTF-8'  # 리눅스/맥용
+        # 입력을 StringIO로 변환
+        old_stdin = sys.stdin
+        sys.stdin = io.StringIO(test_input)
         
-        # 임시 파일에 코드 저장 (UTF-8 인코딩 명시)
-        with tempfile.NamedTemporaryFile(
-            mode='w', 
-            suffix='.py', 
-            delete=False, 
-            encoding='utf-8'
-        ) as f:
-            # UTF-8 인코딩 헤더 추가
-            f.write('# -*- coding: utf-8 -*-\n')
-            f.write('import sys\n')
-            f.write('import os\n')
-            # Python 버전에 따른 인코딩 설정
-            f.write('try:\n')
-            f.write('    sys.stdout.reconfigure(encoding="utf-8")\n')  # Python 3.7+
-            f.write('    sys.stderr.reconfigure(encoding="utf-8")\n')
-            f.write('except:\n')
-            f.write('    pass\n')  # 이전 버전에서는 무시
-            f.write('\n')
+        # 출력을 캡처
+        captured_output = io.StringIO()
+        
+        # matplotlib 설정 초기화
+        plt.close('all')  # 기존 figure 모두 닫기
+        plt.ioff()        # 인터랙티브 모드 끄기
+        
+        # 네임스페이스 준비 (안전한 환경)
+        safe_namespace = {
+            '__builtins__': {
+                'input': input,
+                'print': print,
+                'int': int,
+                'str': str,
+                'float': float,
+                'list': list,
+                'dict': dict,
+                'tuple': tuple,
+                'set': set,
+                'map': map,
+                'filter': filter,
+                'range': range,
+                'len': len,
+                'max': max,
+                'min': min,
+                'sum': sum,
+                'sorted': sorted,
+                'reversed': reversed,
+                'enumerate': enumerate,
+                'zip': zip,
+                'abs': abs,
+                'round': round,
+                'pow': pow,
+                'divmod': divmod,
+                'isinstance': isinstance,
+                'type': type,
+                'hasattr': hasattr,
+                'getattr': getattr,
+                'setattr': setattr,
+                'format': format,
+                'ord': ord,
+                'chr': chr,
+                'bin': bin,
+                'oct': oct,
+                'hex': hex,
+                'any': any,
+                'all': all,
+            }
+        }
+        
+        # 필요한 모듈들 미리 import해서 namespace에 추가
+        if 'pandas' in code or 'pd' in code:
+            import pandas as pd
+            safe_namespace['pandas'] = pd
+            safe_namespace['pd'] = pd
+        
+        if 'numpy' in code or 'np' in code:
+            import numpy as np
+            safe_namespace['numpy'] = np
+            safe_namespace['np'] = np
+        
+        if 'matplotlib' in code or 'plt' in code:
+            import matplotlib.pyplot as plt
+            # matplotlib 설정
+            plt.switch_backend('Agg')
+            plt.ioff()
+            safe_namespace['matplotlib'] = matplotlib
+            safe_namespace['plt'] = plt
             
-            # matplotlib 설정 추가 (차트 저장을 위해)
-            if 'matplotlib' in code or 'plt' in code:
-                f.write('import matplotlib\n')
-                f.write('matplotlib.use("Agg")  # GUI 없이 차트 생성\n')
-                f.write('import matplotlib.pyplot as plt\n')
-                f.write('plt.rcParams["font.family"] = "DejaVu Sans"  # 한글 폰트 설정\n')
-                f.write('\n')
-            
-            f.write(code)
-            temp_file = f.name
+            # matplotlib.pyplot을 직접 import하는 경우 대비
+            import matplotlib.pyplot
+            safe_namespace['matplotlib.pyplot'] = matplotlib.pyplot
         
-        # 코드 실행
-        process = subprocess.run(
-            ['python', '-u', temp_file],  # -u 옵션: unbuffered output
-            input=test_input,
-            capture_output=True,
-            text=True,
-            timeout=10,  # 차트 생성 시간을 고려해 10초로 증가
-            encoding='utf-8',
-            errors='replace',  # 인코딩 에러 시 대체 문자 사용
-            env=env
-        )
+        # 출력 캡처를 위한 컨텍스트
+        with redirect_stdout(captured_output):
+            # 코드 실행
+            exec(code, safe_namespace)
         
-        # 차트 파일 확인 및 반환
+        # 결과 가져오기
+        output = captured_output.getvalue().strip()
+        
+        # 차트 파일 확인
         chart_files = []
-        temp_dir = os.path.dirname(temp_file)
-        
-        # 일반적인 차트 파일명들 확인
         possible_chart_names = [
             'sales_chart.png', 'chart.png', 'plot.png', 'graph.png',
             'figure.png', 'visualization.png'
         ]
         
         for chart_name in possible_chart_names:
-            chart_path = os.path.join(temp_dir, chart_name)
-            if os.path.exists(chart_path):
-                chart_files.append(chart_path)
-        
-        # 현재 디렉토리에서도 확인
-        for chart_name in possible_chart_names:
             if os.path.exists(chart_name):
-                chart_files.append(chart_name)
+                chart_files.append(os.path.abspath(chart_name))
         
-        # 임시 파일 삭제
-        try:
-            os.unlink(temp_file)
-        except:
-            pass  # 파일 삭제 실패해도 무시
+        return True, output, None, chart_files
         
-        if process.returncode == 0:
-            return True, process.stdout.strip(), None, chart_files
-        else:
-            error_msg = process.stderr.strip()
-            line_number = extract_line_number(error_msg, temp_file)
-            return False, error_msg, line_number, []
-            
-    except subprocess.TimeoutExpired:
-        # 타임아웃 시 임시 파일 정리
-        try:
-            os.unlink(temp_file)
-        except:
-            pass
-        return False, "시간 초과 (10초)", None, []
     except Exception as e:
-        return False, f"실행 오류: {str(e)}", None, []
+        # 에러 정보 추출
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        
+        # 에러 라인 번호 추출
+        error_line = None
+        if exc_traceback:
+            # 가장 마지막 traceback에서 라인 번호 가져오기
+            while exc_traceback.tb_next:
+                exc_traceback = exc_traceback.tb_next
+            error_line = exc_traceback.tb_lineno
+        
+        # 에러 메시지 생성
+        error_msg = f"{exc_type.__name__}: {str(exc_value)}"
+        
+        return False, error_msg, error_line, []
+        
+    finally:
+        # 원래 상태로 복원
+        sys.stdin = old_stdin
+        plt.close('all')  # 모든 figure 정리
 
-def extract_line_number(error_msg, temp_file):
-    """에러 메시지에서 줄 번호 추출 - 인코딩 헤더 보정"""
+def extract_line_number(error_msg, temp_file=None):
+    """에러 메시지에서 줄 번호 추출"""
     try:
         patterns = [
-            rf'File "{re.escape(temp_file)}", line (\d+)',
             r'line (\d+)',
             r'Line (\d+)'
         ]
@@ -342,17 +377,13 @@ def extract_line_number(error_msg, temp_file):
         for pattern in patterns:
             match = re.search(pattern, error_msg)
             if match:
-                line_num = int(match.group(1))
-                # 우리가 추가한 헤더 줄들을 빼고 실제 사용자 코드 줄 번호 계산
-                # 추가한 줄: encoding 헤더(1줄) + import sys(1줄) + try-except(5줄) + 빈줄(1줄) = 8줄
-                actual_line = max(1, line_num - 8)
-                return actual_line
+                return int(match.group(1))
         return None
     except:
         return None
 
 def get_default_code(problem_id):
-    """문제별 기본 코드 템플릿 - 인코딩 안전"""
+    """문제별 기본 코드 템플릿"""
     templates = {
         "1": """# 두 수의 합
 # 입력: 두 정수 a, b  
@@ -368,10 +399,6 @@ n = int(input())
 numbers = list(map(int, input().split()))
 print(max(numbers))""",
         "3": """# 매출 데이터 시각화
-# pandas와 matplotlib 라이브러리 사용
-# 입력: 월의 개수 n, n개의 월과 매출액
-# 출력: DataFrame 모양, 총매출, 평균매출, 그래프생성완료
-
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -398,17 +425,16 @@ print(df.shape)
 print(df['매출액'].sum())
 print(f"{df['매출액'].mean():.2f}")
 
-# 그래프 생성 (화면에 표시하지 않고 파일로 저장)
-fig, ax = plt.subplots(figsize=(10, 6))
-ax.bar(df['월'], df['매출액'])
-ax.set_title('월별 매출 현황')
-ax.set_xlabel('월')
-ax.set_ylabel('매출액')
+# 그래프 생성
+plt.figure(figsize=(10, 6))
+plt.bar(df['월'], df['매출액'])
+plt.title('월별 매출 현황')
+plt.xlabel('월')
+plt.ylabel('매출액')
 plt.xticks(rotation=45)
 plt.tight_layout()
-
-# Streamlit에서 직접 표시
-st.pyplot(fig)
+plt.savefig('sales_chart.png')
+plt.close()
 
 print("그래프 생성 완료")""",
         "default": """# 여기에 코드를 작성하세요
@@ -1102,83 +1128,6 @@ def admin_users_page():
                             st.write(f"**마지막 활동:** {last_date}")
                         else:
                             st.write("**마지막 활동:** 없음")
-                    
-                    # 관리 버튼들
-                    col_detail, col_reset, col_delete = st.columns(3)
-                    
-                    with col_detail:
-                        if st.button(f"📋 상세보기", key=f"detail_{username}"):
-                            # 상세보기는 탭2로 이동하지 않고 현재 탭에서 정보 표시
-                            st.write("---")
-                            st.write(f"### 📋 {username} 상세 정보")
-                            
-                            # 기본 정보 표시
-                            detail_col1, detail_col2 = st.columns(2)
-                            with detail_col1:
-                                try:
-                                    created_time = float(user_data.get('created_at', 0))
-                                    if created_time > 0:
-                                        created_date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(created_time))
-                                    else:
-                                        created_date = "알 수 없음"
-                                except (ValueError, TypeError):
-                                    created_date = "알 수 없음"
-                                st.write(f"**가입일:** {created_date}")
-                                st.write(f"**해결한 문제:** {len(user_data.get('solved_problems', []))}개")
-                            
-                            with detail_col2:
-                                st.write(f"**총 제출:** {user_data.get('total_submissions', 0)}회")
-                                user_subs = submissions.get(username, [])
-                                if user_subs:
-                                    success_count = sum(1 for sub in user_subs if sub['success'])
-                                    success_rate = (success_count / len(user_subs) * 100)
-                                    st.write(f"**성공률:** {success_rate:.1f}%")
-                                else:
-                                    st.write(f"**성공률:** 0%")
-                            
-                            # 해결한 문제
-                            solved_problems = user_data.get('solved_problems', [])
-                            if solved_problems:
-                                st.write("**해결한 문제:**")
-                                problems = load_problems()
-                                for problem_id in solved_problems:
-                                    if problem_id in problems:
-                                        problem = problems[problem_id]
-                                        st.write(f"- {problem_id}번. {problem['title']} ({problem['difficulty']})")
-                            else:
-                                st.write("**해결한 문제:** 없음")
-                    
-                    with col_reset:
-                        if st.button(f"진도 초기화", key=f"reset_{username}", type="secondary"):
-                            if st.button(f"정말 초기화하시겠습니까?", key=f"confirm_reset_{username}"):
-                                # 해결한 문제와 제출 기록 초기화
-                                users[username]['solved_problems'] = []
-                                users[username]['total_submissions'] = 0
-                                save_users(users)
-                                
-                                # 제출 기록도 삭제
-                                if username in submissions:
-                                    del submissions[username]
-                                    save_submissions(submissions)
-                                
-                                st.success(f"{username}의 진도가 초기화되었습니다!")
-                                st.rerun()
-                    
-                    with col_delete:
-                        if st.button(f"계정 삭제", key=f"delete_{username}", type="secondary"):
-                            # 체크박스로 삭제 확인
-                            if st.checkbox(f"{username} 계정을 정말 삭제하시겠습니까?", key=f"confirm_delete_{username}"):
-                                if st.button(f"최종 삭제", key=f"final_delete_{username}", type="secondary"):
-                                    del users[username]
-                                    save_users(users)
-                                    
-                                    # 제출 기록도 삭제
-                                    if username in submissions:
-                                        del submissions[username]
-                                        save_submissions(submissions)
-                                    
-                                    st.success(f"{username} 계정이 삭제되었습니다!")
-                                    st.rerun()
         else:
             st.info("등록된 사용자가 없습니다.")
     
@@ -1286,48 +1235,6 @@ def admin_users_page():
             with col2:
                 st.write("**⚠️ 위험한 작업입니다!**")
                 st.write("이 작업은 되돌릴 수 없습니다.")
-            
-            st.markdown("---")
-            
-            # 사용자 검색 및 개별 수정
-            st.write("### 👤 개별 사용자 수정")
-            
-            edit_user = st.selectbox("수정할 사용자 선택", list(users.keys()), key="edit_user")
-            
-            if edit_user:
-                user_data = users[edit_user]
-                
-                with st.form("edit_user_form"):
-                    st.write(f"**{edit_user}** 사용자 정보 수정")
-                    
-                    # 해결한 문제 수동 편집
-                    current_solved = user_data.get('solved_problems', [])
-                    solved_input = st.text_input(
-                        "해결한 문제 번호 (쉼표로 구분)",
-                        value=",".join(current_solved),
-                        help="예: 1,2,3"
-                    )
-                    
-                    # 총 제출 횟수 수동 편집
-                    total_subs = st.number_input(
-                        "총 제출 횟수",
-                        min_value=0,
-                        value=user_data.get('total_submissions', 0)
-                    )
-                    
-                    if st.form_submit_button("수정 완료"):
-                        # 해결한 문제 업데이트
-                        if solved_input.strip():
-                            new_solved = [p.strip() for p in solved_input.split(",") if p.strip()]
-                        else:
-                            new_solved = []
-                        
-                        users[edit_user]['solved_problems'] = new_solved
-                        users[edit_user]['total_submissions'] = total_subs
-                        save_users(users)
-                        
-                        st.success(f"{edit_user} 사용자 정보가 수정되었습니다!")
-                        st.rerun()
         else:
             st.info("등록된 사용자가 없습니다.")
     
