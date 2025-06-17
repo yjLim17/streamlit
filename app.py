@@ -9,7 +9,6 @@ import io
 import contextlib
 import traceback
 import tempfile
-from contextlib import redirect_stdout, redirect_stderr
 
 # matplotlib 설정을 더 강력하게 (맨 앞에 배치)
 import matplotlib
@@ -353,7 +352,7 @@ def run_code(code, test_input):
                 safe_namespace['matplotlib'] = None
         
         # 출력 캡처를 위한 컨텍스트
-        with redirect_stdout(captured_output):
+        with contextlib.redirect_stdout(captured_output):
             # 코드 실행
             exec(code, safe_namespace)
         
