@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import time
 import re
+import matplotlib
 matplotlib.use("Agg")  # 🔧 반드시 추가해야 Streamlit 등 서버 환경에서 오류 안남
 import matplotlib.pyplot as plt
 
@@ -398,15 +399,16 @@ print(df['매출액'].sum())
 print(f"{df['매출액'].mean():.2f}")
 
 # 그래프 생성 (화면에 표시하지 않고 파일로 저장)
-plt.figure(figsize=(10, 6))
-plt.bar(df['월'], df['매출액'])
-plt.title('월별 매출 현황')
-plt.xlabel('월')
-plt.ylabel('매출액')
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.bar(df['월'], df['매출액'])
+ax.set_title('월별 매출 현황')
+ax.set_xlabel('월')
+ax.set_ylabel('매출액')
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig('sales_chart.png')
-plt.close()  # 창이 열리지 않도록
+
+# Streamlit에서 직접 표시
+st.pyplot(fig)
 
 print("그래프 생성 완료")""",
         "default": """# 여기에 코드를 작성하세요
