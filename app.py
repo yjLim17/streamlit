@@ -245,6 +245,8 @@ def is_admin():
 
 def run_code(code, test_input):
     """exec를 사용한 안전한 코드 실행"""
+    old_stdin = None
+    
     try:
         # 입력을 StringIO로 변환
         old_stdin = sys.stdin
@@ -253,9 +255,12 @@ def run_code(code, test_input):
         # 출력을 캡처
         captured_output = io.StringIO()
         
-        # matplotlib 설정 초기화
-        plt.close('all')  # 기존 figure 모두 닫기
-        plt.ioff()        # 인터랙티브 모드 끄기
+        # matplotlib 초기 설정 (전역에서 이미 import되어 있음)
+        try:
+            plt.close('all')  # 기존 figure 모두 닫기
+            plt.ioff()        # 인터랙티브 모드 끄기
+        except:
+            pass  # matplotlib가 없어도 계속 진행
         
         # 네임스페이스 준비 (안전한 환경)
         safe_namespace = {
@@ -302,26 +307,50 @@ def run_code(code, test_input):
         
         # 필요한 모듈들 미리 import해서 namespace에 추가
         if 'pandas' in code or 'pd' in code:
-            import pandas as pd
-            safe_namespace['pandas'] = pd
-            safe_namespace['pd'] = pd
+            try:
+                import pandas as pd
+                safe_namespace['pandas'] = pd
+                safe_namespace['pd'] = pd
+            except ImportError:
+                pass
         
         if 'numpy' in code or 'np' in code:
-            import numpy as np
-            safe_namespace['numpy'] = np
-            safe_namespace['np'] = np
+            try:
+                import numpy as np
+                safe_namespace['numpy'] = np
+                safe_namespace['np'] = np
+            except ImportError:
+                pass
         
         if 'matplotlib' in code or 'plt' in code:
-            import matplotlib.pyplot as plt
-            # matplotlib 설정
-            plt.switch_backend('Agg')
-            plt.ioff()
-            safe_namespace['matplotlib'] = matplotlib
-            safe_namespace['plt'] = plt
-            
-            # matplotlib.pyplot을 직접 import하는 경우 대비
-            import matplotlib.pyplot
-            safe_namespace['matplotlib.pyplot'] = matplotlib.pyplot
+            try:
+                import matplotlib
+                import matplotlib.pyplot as plt_local
+                # matplotlib 설정
+                plt_local.switch_backend('Agg')
+                plt_local.ioff()
+                safe_namespace['matplotlib'] = matplotlib
+                safe_namespace['plt'] = plt_local
+                
+                # matplotlib.pyplot을 직접 import하는 경우 대비
+                safe_namespace['matplotlib.pyplot'] = plt_local
+            except ImportError:
+                # matplotlib가 없으면 더미 객체 제공
+                class DummyPlt:
+                    def figure(self, *args, **kwargs): pass
+                    def bar(self, *args, **kwargs): pass
+                    def title(self, *args, **kwargs): pass
+                    def xlabel(self, *args, **kwargs): pass
+                    def ylabel(self, *args, **kwargs): pass
+                    def xticks(self, *args, **kwargs): pass
+                    def tight_layout(self, *args, **kwargs): pass
+                    def savefig(self, *args, **kwargs): pass
+                    def close(self, *args, **kwargs): pass
+                    def ioff(self, *args, **kwargs): pass
+                    def switch_backend(self, *args, **kwargs): pass
+                
+                safe_namespace['plt'] = DummyPlt()
+                safe_namespace['matplotlib'] = None
         
         # 출력 캡처를 위한 컨텍스트
         with redirect_stdout(captured_output):
@@ -363,8 +392,14 @@ def run_code(code, test_input):
         
     finally:
         # 원래 상태로 복원
-        sys.stdin = old_stdin
-        plt.close('all')  # 모든 figure 정리
+        if old_stdin:
+            sys.stdin = old_stdin
+        
+        # matplotlib 정리 (안전하게)
+        try:
+            plt.close('all')  # 모든 figure 정리
+        except:
+            pass  # 에러가 나도 무시
 
 def extract_line_number(error_msg, temp_file=None):
     """에러 메시지에서 줄 번호 추출"""
