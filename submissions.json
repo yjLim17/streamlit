@@ -1,0 +1,94 @@
+{
+  "임영재": [
+    {
+      "problem_id": "1",
+      "code": "# 두 수의 합\n# 입력: 두 정수 a, b\n# 출력: a + b\n\na, b = map(int, input().split())\nprint(a + b)",
+      "passed_tests": 0,
+      "total_tests": 3,
+      "success": false,
+      "timestamp": 1750040921.1023593,
+      "date": "2025-06-16 11:28:41"
+    },
+    {
+      "problem_id": "1",
+      "code": "a, b = map(int, input().split())\r\nprint(a + b)\r\n",
+      "passed_tests": 3,
+      "total_tests": 3,
+      "success": true,
+      "timestamp": 1750040945.470013,
+      "date": "2025-06-16 11:29:05"
+    },
+    {
+      "problem_id": "1",
+      "code": "a, b = map(int, input().split())\r\nprint(a + b)\r\n\r\n",
+      "passed_tests": 3,
+      "total_tests": 3,
+      "success": true,
+      "timestamp": 1750040961.768254,
+      "date": "2025-06-16 11:29:21"
+    },
+    {
+      "problem_id": "2",
+      "code": "n = int(input())\nnumbers = list(map(int, input().split()))\nprint(max(numbers))",
+      "passed_tests": 3,
+      "total_tests": 3,
+      "success": true,
+      "timestamp": 1750040975.748767,
+      "date": "2025-06-16 11:29:35"
+    },
+    {
+      "problem_id": "3",
+      "code": "# 매출 데이터 시각화\n# pandas와 matplotlib 라이브러리 사용\n# 입력: 월의 개수 n, n개의 월과 매출액\n# 출력: DataFrame 모양, 총매출, 평균매출, 그래프생성완료\n\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\n# 입력 받기\nn = int(input())\nmonths = []\nsales = []\n\nfor i in range(n):\n    line = input().split()\n    month = line[0]\n    sale = int(line[1])\n    months.append(month)\n    sales.append(sale)\n\n# DataFrame 생성\ndf = pd.DataFrame({\n    '월': months,\n    '매출액': sales\n})\n\n# 결과 출력\nprint(df.shape)\nprint(df['매출액'].sum())\nprint(f\"{df['매출액'].mean():.2f}\")\n\n# 그래프 생성 (화면에 표시하지 않고 파일로 저장)\nplt.figure(figsize=(10, 6))\nplt.bar(df['월'], df['매출액'])\nplt.title('월별 매출 현황')\nplt.xlabel('월')\nplt.ylabel('매출액')\nplt.xticks(rotation=45)\nplt.tight_layout()\nplt.savefig('sales_chart.png')\nplt.close()  # 창이 열리지 않도록\n\nprint(\"그래프 생성 완료\")",
+      "passed_tests": 3,
+      "total_tests": 3,
+      "success": true,
+      "timestamp": 1750043420.0091083,
+      "date": "2025-06-16 12:10:20"
+    },
+    {
+      "problem_id": "3",
+      "code": "# 매출 데이터 시각화\n# pandas와 matplotlib 라이브러리 사용\n# 입력: 월의 개수 n, n개의 월과 매출액\n# 출력: DataFrame 모양, 총매출, 평균매출, 그래프생성완료\n\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\n# 입력 받기\nn = int(input())\nmonths = []\nsales = []\n\nfor i in range(n):\n    line = input().split()\n    month = line[0]\n    sale = int(line[1])\n    months.append(month)\n    sales.append(sale)\n\n# DataFrame 생성\ndf = pd.DataFrame({\n    '월': months,\n    '매출액': sales\n})\n\n# 결과 출력\nprint(df.shape)\nprint(df['매출액'].sum())\nprint(f\"{df['매출액'].mean():.2f}\")\n\n# 그래프 생성 (화면에 표시하지 않고 파일로 저장)\nplt.figure(figsize=(10, 6))\nplt.bar(df['월'], df['매출액'])\nplt.title('월별 매출 현황')\nplt.xlabel('월')\nplt.ylabel('매출액')\nplt.xticks(rotation=45)\nplt.tight_layout()\nplt.savefig('sales_chart.png')\nplt.close()  # 창이 열리지 않도록\n\nprint(\"그래프 생성 완료\")",
+      "passed_tests": 3,
+      "total_tests": 3,
+      "success": true,
+      "timestamp": 1750063481.170416,
+      "date": "2025-06-16 17:44:41"
+    },
+    {
+      "problem_id": "3",
+      "code": "# 매출 데이터 시각화\n# pandas와 matplotlib 라이브러리 사용\n# 입력: 월의 개수 n, n개의 월과 매출액\n# 출력: DataFrame 모양, 총매출, 평균매출, 그래프생성완료\n\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\n# 입력 받기\nn = int(input())\nmonths = []\nsales = []\n\nfor i in range(n):\n    line = input().split()\n    month = line[0]\n    sale = int(line[1])\n    months.append(month)\n    sales.append(sale)\n\n# DataFrame 생성\ndf = pd.DataFrame({\n    '월': months,\n    '매출액': sales\n})\n\n# 결과 출력\nprint(df.shape)\nprint(df['매출액'].sum())\nprint(f\"{df['매출액'].mean():.2f}\")\n\n# 그래프 생성 (화면에 표시하지 않고 파일로 저장)\nplt.figure(figsize=(10, 6))\nplt.bar(df['월'], df['매출액'])\nplt.title('월별 매출 현황')\nplt.xlabel('월')\nplt.ylabel('매출액')\nplt.xticks(rotation=45)\nplt.tight_layout()\nplt.savefig('sales_chart.png')\nplt.close()  # 창이 열리지 않도록\n\nprint(\"그래프 생성 완료\")",
+      "passed_tests": 3,
+      "total_tests": 3,
+      "success": true,
+      "timestamp": 1750069574.6175916,
+      "date": "2025-06-16 19:26:14"
+    },
+    {
+      "problem_id": "3",
+      "code": "# 매출 데이터 시각화\n# pandas와 matplotlib 라이브러리 사용\n# 입력: 월의 개수 n, n개의 월과 매출액\n# 출력: DataFrame 모양, 총매출, 평균매출, 그래프생성완료\nimport numpy as np\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\n# 입력 받기\nn = int(input())\nmonths = []\nsales = []\n\nfor i in range(n):\n    line = input().split()\n    month = line[0]\n    sale = int(line[1])\n    months.append(month)\n    sales.append(sale)\n\n# DataFrame 생성\ndf = pd.DataFrame({\n    '월': months,\n    '매출액': sales\n})\n\n# 결과 출력\nprint(df.shape)\nprint(df['매출액'].sum())\nprint(f\"{df['매출액'].mean():.2f}\")\n\n# 그래프 생성 (화면에 표시하지 않고 파일로 저장)\nplt.figure(figsize=(10, 6))\nplt.bar(df['월'], df['매출액'])\nplt.title('월별 매출 현황')\nplt.xlabel('월')\nplt.ylabel('매출액')\nplt.xticks(rotation=45)\nplt.tight_layout()\nplt.savefig('sales_chart.png')\nplt.close()  # 창이 열리지 않도록\n\nprint(\"그래프 생성 완료\")",
+      "passed_tests": 3,
+      "total_tests": 3,
+      "success": true,
+      "timestamp": 1750072614.387324,
+      "date": "2025-06-16 20:16:54"
+    },
+    {
+      "problem_id": "3",
+      "code": "# 매출 데이터 시각화\n# pandas와 matplotlib 라이브러리 사용\n# 입력: 월의 개수 n, n개의 월과 매출액\n# 출력: DataFrame 모양, 총매출, 평균매출, 그래프생성완료\n\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\n\n# 입력 받기\nn = int(input())\nmonths = []\nsales = []\n\nfor i in range(n):\n    line = input().split()\n    month = line[0]\n    sale = int(line[1])\n    months.append(month)\n    sales.append(sale)\n\n# DataFrame 생성\ndf = pd.DataFrame({\n    '월': months,\n    '매출액': sales\n})\n\n# 결과 출력\nprint(df.shape)\nprint(df['매출액'].sum())\nprint(f\"{df['매출액'].mean():.2f}\")\n\n# 그래프 생성 (화면에 표시하지 않고 파일로 저장)\nplt.figure(figsize=(10, 6))\nplt.bar(df['월'], df['매출액'])\nplt.title('월별 매출 현황')\nplt.xlabel('월')\nplt.ylabel('매출액')\nplt.xticks(rotation=45)\nplt.tight_layout()\nplt.savefig('sales_chart.png')\nplt.close()  # 창이 열리지 않도록\n\nprint(\"그래프 생성 완료\")",
+      "passed_tests": 3,
+      "total_tests": 3,
+      "success": true,
+      "timestamp": 1750126891.1107485,
+      "date": "2025-06-17 11:21:31"
+    },
+    {
+      "problem_id": "3",
+      "code": "# 매출 데이터 시각화\n# pandas와 matplotlib 라이브러리 사용\n# 입력: 월의 개수 n, n개의 월과 매출액\n# 출력: DataFrame 모양, 총매출, 평균매출, 그래프생성완료\n\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\n# 입력 받기\nn = int(input())\nmonths = []\nsales = []\n\nfor i in range(n):\n    line = input().split()\n    month = line[0]\n    sale = int(line[1])\n    months.append(month)\n    sales.append(sale)\n\n# DataFrame 생성\ndf = pd.DataFrame({\n    '월': months,\n    '매출액': sales\n})\n\n# 결과 출력\nprint(df.shape)\nprint(df['매출액'].sum())\nprint(f\"{df['매출액'].mean():.2f}\")\n\n# 그래프 생성 (화면에 표시하지 않고 파일로 저장)\nplt.figure(figsize=(10, 6))\nplt.bar(df['월'], df['매출액'])\nplt.title('월별 매출 현황')\nplt.xlabel('월')\nplt.ylabel('매출액')\nplt.xticks(rotation=45)\nplt.tight_layout()\nplt.savefig('sales_chart.png')\nplt.close()  # 창이 열리지 않도록\n\nprint(\"그래프 생성 완료\")",
+      "passed_tests": 3,
+      "total_tests": 3,
+      "success": true,
+      "timestamp": 1750141014.758562,
+      "date": "2025-06-17 15:16:54"
+    }
+  ]
+}
