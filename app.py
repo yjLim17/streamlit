@@ -6,7 +6,6 @@ import subprocess
 import tempfile
 import time
 import re
-import matplotlib
 matplotlib.use("Agg")  # 🔧 반드시 추가해야 Streamlit 등 서버 환경에서 오류 안남
 import matplotlib.pyplot as plt
 
