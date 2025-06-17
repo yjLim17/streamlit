@@ -19,4 +19,3 @@ PyYAML
 pyparsing
 markdown
 streamlit-ace
-
